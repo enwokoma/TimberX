@@ -49,6 +49,7 @@ class MediaSessionCallback(
 
     init {
         audioFocusHelper.onAudioFocusGain {
+            Timber.d("GAIN")
             val isPlaying = songPlayer.getSession().controller.playbackState.state == STATE_PLAYING
             if (isAudioFocusGranted && !isPlaying) {
                 songPlayer.playSong()
@@ -56,12 +57,14 @@ class MediaSessionCallback(
             isAudioFocusGranted = false
         }
         audioFocusHelper.onAudioFocusLoss {
+            Timber.d("LOSS")
             abandonPlayback()
             isAudioFocusGranted = false
             songPlayer.pause()
         }
 
         audioFocusHelper.onAudioFocusLossTransient {
+            Timber.d("TRANSIENT")
             val isPlaying = songPlayer.getSession().controller.playbackState.state == STATE_PLAYING
             if (isPlaying) {
                 isAudioFocusGranted = true
@@ -76,15 +79,18 @@ class MediaSessionCallback(
     }
 
     override fun onPause() {
+        Timber.d("onPause()")
         songPlayer.pause()
     }
 
     override fun onPlay() {
+        Timber.d("onPlay()")
         if (audioFocusHelper.requestPlayback())
             songPlayer.playSong()
     }
 
     override fun onPlayFromSearch(query: String?, extras: Bundle?) {
+        Timber.d("onPlayFromSearch()")
         query?.let {
             val song = songsRepository.searchSongs(query, 1)
             if (song.isNotEmpty()) {
@@ -94,6 +100,7 @@ class MediaSessionCallback(
     }
 
     override fun onPlayFromMediaId(mediaId: String, extras: Bundle?) {
+        Timber.d("onPlayFromMediaId()")
         val songId = MediaID().fromString(mediaId).mediaId!!.toLong()
         songPlayer.playSong(songId)
 
@@ -110,13 +117,25 @@ class MediaSessionCallback(
         }
     }
 
-    override fun onSeekTo(pos: Long) = songPlayer.seekTo(pos.toInt())
+    override fun onSeekTo(pos: Long) {
+        Timber.d("onSeekTo()")
+        songPlayer.seekTo(pos.toInt())
+    }
 
-    override fun onSkipToNext() = songPlayer.nextSong()
+    override fun onSkipToNext() {
+        Timber.d("onSkipToNext()")
+        songPlayer.nextSong()
+    }
 
-    override fun onSkipToPrevious() = songPlayer.previousSong()
+    override fun onSkipToPrevious() {
+        Timber.d("onSkipToPrevious()")
+        songPlayer.previousSong()
+    }
 
-    override fun onStop() = songPlayer.stop()
+    override fun onStop() {
+        Timber.d("onStop()")
+        songPlayer.stop()
+    }
 
     override fun onSetRepeatMode(repeatMode: Int) {
         super.onSetRepeatMode(repeatMode)
