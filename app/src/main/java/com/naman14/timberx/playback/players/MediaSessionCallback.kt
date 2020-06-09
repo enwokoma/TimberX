@@ -35,11 +35,13 @@ import com.naman14.timberx.constants.Constants.SONG
 import com.naman14.timberx.constants.Constants.SONGS_LIST
 import com.naman14.timberx.db.QueueDao
 import com.naman14.timberx.models.MediaID
+import com.naman14.timberx.playback.AudioFocusHelper
 import com.naman14.timberx.repository.SongsRepository
 
 class MediaSessionCallback(
     private val mediaSession: MediaSessionCompat,
     private val songPlayer: SongPlayer,
+    private val audioFocusHelper: AudioFocusHelper,
     private val songsRepository: SongsRepository,
     private val queueDao: QueueDao
 ) : MediaSessionCompat.Callback() {

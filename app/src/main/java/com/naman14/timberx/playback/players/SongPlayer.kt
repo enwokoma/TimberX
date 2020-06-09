@@ -57,6 +57,7 @@ import com.naman14.timberx.extensions.isPlaying
 import com.naman14.timberx.extensions.position
 import com.naman14.timberx.extensions.toSongIDs
 import com.naman14.timberx.models.Song
+import com.naman14.timberx.playback.AudioFocusHelper
 import com.naman14.timberx.repository.SongsRepository
 import com.naman14.timberx.util.MusicUtils
 import timber.log.Timber
@@ -126,7 +127,8 @@ class RealSongPlayer(
     private val musicPlayer: MusicPlayer,
     private val songsRepository: SongsRepository,
     private val queueDao: QueueDao,
-    private val queue: Queue
+    private val queue: Queue,
+    audioFocusHelper: AudioFocusHelper
 ) : SongPlayer {
 
     private var isInitialized: Boolean = false
@@ -141,7 +143,15 @@ class RealSongPlayer(
 
     private var mediaSession = MediaSessionCompat(context, context.getString(R.string.app_name)).apply {
         setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS)
-        setCallback(MediaSessionCallback(this, this@RealSongPlayer, songsRepository, queueDao))
+        setCallback(
+            MediaSessionCallback(
+                this,
+                this@RealSongPlayer,
+                audioFocusHelper,
+                songsRepository,
+                queueDao
+            )
+        )
         setPlaybackState(stateBuilder.build())
 
         val sessionIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)

@@ -38,6 +38,6 @@ val mediaModule = module {
     } bind (AudioFocusHelper::class)
 
     factory {
-        RealSongPlayer(get(), get(), get(), get(), get())
+        RealSongPlayer(get(), get(), get(), get(), get(), get())
     } bind SongPlayer::class
 }
