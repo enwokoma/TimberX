@@ -14,6 +14,7 @@
  */
 package com.naman14.timberx.playback.players
 
+import android.media.AudioManager
 import android.os.Bundle
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
@@ -37,6 +38,7 @@ import com.naman14.timberx.db.QueueDao
 import com.naman14.timberx.models.MediaID
 import com.naman14.timberx.playback.AudioFocusHelper
 import com.naman14.timberx.repository.SongsRepository
+import timber.log.Timber
 
 class MediaSessionCallback(
     private val mediaSession: MediaSessionCompat,
@@ -46,9 +48,42 @@ class MediaSessionCallback(
     private val queueDao: QueueDao
 ) : MediaSessionCompat.Callback() {
 
-    override fun onPause() = songPlayer.pause()
+    init {
+        audioFocusHelper.onAudioFocusGain {
+            val isPlaying = songPlayer.getSession().controller.playbackState.state == PlaybackStateCompat.STATE_PLAYING
+            if (isAudioFocusGranted && !isPlaying) {
+                songPlayer.playSong()
+            } else audioFocusHelper.setVolume(AudioManager.ADJUST_RAISE)
+            isAudioFocusGranted = false
+        }
+        audioFocusHelper.onAudioFocusLoss {
+            abandonPlayback()
+            isAudioFocusGranted = false
+            songPlayer.pause()
+        }
 
-    override fun onPlay() = songPlayer.playSong()
+        audioFocusHelper.onAudioFocusLossTransient {
+            val isPlaying = songPlayer.getSession().controller.playbackState.state == PlaybackStateCompat.STATE_PLAYING
+            if (isPlaying) {
+                isAudioFocusGranted = true
+                songPlayer.pause()
+            }
+        }
+
+        audioFocusHelper.onAudioFocusLossTransientCanDuck {
+            Timber.d("TRANSIENT_CAN_DUCK")
+            audioFocusHelper.setVolume(AudioManager.ADJUST_LOWER)
+        }
+    }
+
+    override fun onPause() {
+        songPlayer.pause()
+    }
+
+    override fun onPlay() {
+        if (audioFocusHelper.requestPlayback())
+            songPlayer.playSong()
+    }
 
     override fun onPlayFromSearch(query: String?, extras: Bundle?) {
         query?.let {
