@@ -17,8 +17,7 @@ package com.naman14.timberx.playback.players
 import android.media.AudioManager
 import android.os.Bundle
 import android.support.v4.media.session.MediaSessionCompat
-import android.support.v4.media.session.PlaybackStateCompat
-import android.support.v4.media.session.PlaybackStateCompat.STATE_NONE
+import android.support.v4.media.session.PlaybackStateCompat.*
 import com.naman14.timberx.constants.Constants.ACTION_PLAY_NEXT
 import com.naman14.timberx.constants.Constants.ACTION_QUEUE_REORDER
 import com.naman14.timberx.constants.Constants.ACTION_REPEAT_QUEUE
@@ -50,7 +49,7 @@ class MediaSessionCallback(
 
     init {
         audioFocusHelper.onAudioFocusGain {
-            val isPlaying = songPlayer.getSession().controller.playbackState.state == PlaybackStateCompat.STATE_PLAYING
+            val isPlaying = songPlayer.getSession().controller.playbackState.state == STATE_PLAYING
             if (isAudioFocusGranted && !isPlaying) {
                 songPlayer.playSong()
             } else audioFocusHelper.setVolume(AudioManager.ADJUST_RAISE)
@@ -63,7 +62,7 @@ class MediaSessionCallback(
         }
 
         audioFocusHelper.onAudioFocusLossTransient {
-            val isPlaying = songPlayer.getSession().controller.playbackState.state == PlaybackStateCompat.STATE_PLAYING
+            val isPlaying = songPlayer.getSession().controller.playbackState.state == STATE_PLAYING
             if (isPlaying) {
                 isAudioFocusGranted = true
                 songPlayer.pause()
@@ -123,11 +122,10 @@ class MediaSessionCallback(
         super.onSetRepeatMode(repeatMode)
         val bundle = mediaSession.controller.playbackState.extras ?: Bundle()
         songPlayer.setPlaybackState(
-                PlaybackStateCompat.Builder(mediaSession.controller.playbackState)
-                        .setExtras(bundle.apply {
-                            putInt(REPEAT_MODE, repeatMode)
-                        }
-                        ).build()
+            Builder(mediaSession.controller.playbackState)
+                    .setExtras(bundle.apply {
+                        putInt(REPEAT_MODE, repeatMode)
+                    }).build()
         )
     }
 
@@ -135,10 +133,10 @@ class MediaSessionCallback(
         super.onSetShuffleMode(shuffleMode)
         val bundle = mediaSession.controller.playbackState.extras ?: Bundle()
         songPlayer.setPlaybackState(
-                PlaybackStateCompat.Builder(mediaSession.controller.playbackState)
-                        .setExtras(bundle.apply {
-                            putInt(SHUFFLE_MODE, shuffleMode)
-                        }).build()
+            Builder(mediaSession.controller.playbackState)
+                    .setExtras(bundle.apply {
+                        putInt(SHUFFLE_MODE, shuffleMode)
+                    }).build()
         )
     }
 
