@@ -1,9 +1,12 @@
 package com.naman14.timberx.playback
 
 import android.content.Context
+import android.content.Context.AUDIO_SERVICE
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.media.AudioManager.*
+import com.naman14.timberx.extensions.systemService
 import com.naman14.timberx.util.Utils.isOreo
 
 /**
@@ -39,9 +42,9 @@ interface AudioFocusHelper {
 
 class AudioFocusHelperImplementation(
         context: Context
-) : AudioFocusHelper, AudioManager.OnAudioFocusChangeListener {
+) : AudioFocusHelper, OnAudioFocusChangeListener {
 
-    private val audioManager: AudioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private val audioManager: AudioManager = context.systemService(AUDIO_SERVICE)
 
     private var audioFocusGainCallback: OnAudioFocusGain = {}
     private var audioFocusLossCallback: OnAudioFocusLoss = {}
@@ -50,10 +53,10 @@ class AudioFocusHelperImplementation(
 
     override fun onAudioFocusChange(focusChange: Int) {
         when (focusChange) {
-            AudioManager.AUDIOFOCUS_GAIN -> audioFocusGainCallback()
-            AudioManager.AUDIOFOCUS_LOSS -> audioFocusLossCallback()
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> audioFocusLossTransientCallback()
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> audioFocusLossTransientCanDuckCallback()
+            AUDIOFOCUS_GAIN -> audioFocusGainCallback()
+            AUDIOFOCUS_LOSS -> audioFocusLossCallback()
+            AUDIOFOCUS_LOSS_TRANSIENT -> audioFocusLossTransientCallback()
+            AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> audioFocusLossTransientCanDuckCallback()
         }
     }
 
@@ -66,17 +69,14 @@ class AudioFocusHelperImplementation(
                 setUsage(AudioAttributes.USAGE_MEDIA)
             }.build()
             audioManager.requestAudioFocus(
-                    AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                    AudioFocusRequest.Builder(AUDIOFOCUS_GAIN)
                             .setAudioAttributes(attr)
                             .setAcceptsDelayedFocusGain(true)
                             .setOnAudioFocusChangeListener(this)
                             .build()
             )
-        } else audioManager.requestAudioFocus(this,
-                AudioManager.STREAM_MUSIC,
-                AudioManager.AUDIOFOCUS_GAIN
-        )
-        return state == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+        } else audioManager.requestAudioFocus(this, STREAM_MUSIC, AUDIOFOCUS_GAIN)
+        return state == AUDIOFOCUS_REQUEST_GRANTED
     }
 
     override fun abandonPlayback() {
@@ -86,7 +86,7 @@ class AudioFocusHelperImplementation(
                 setUsage(AudioAttributes.USAGE_MEDIA)
             }.build()
             audioManager.abandonAudioFocusRequest(
-                    AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                    AudioFocusRequest.Builder(AUDIOFOCUS_GAIN)
                             .setOnAudioFocusChangeListener(this)
                             .setAudioAttributes(attr)
                             .build()
@@ -111,6 +111,6 @@ class AudioFocusHelperImplementation(
     }
 
     override fun setVolume(volume: Int) {
-        audioManager.adjustVolume(volume, AudioManager.FLAG_PLAY_SOUND)
+        audioManager.adjustVolume(volume, FLAG_PLAY_SOUND)
     }
 }
