@@ -14,10 +14,10 @@
  */
 package com.naman14.timberx.playback.players
 
+import android.media.AudioManager
 import android.os.Bundle
 import android.support.v4.media.session.MediaSessionCompat
-import android.support.v4.media.session.PlaybackStateCompat
-import android.support.v4.media.session.PlaybackStateCompat.STATE_NONE
+import android.support.v4.media.session.PlaybackStateCompat.*
 import com.naman14.timberx.constants.Constants.ACTION_PLAY_NEXT
 import com.naman14.timberx.constants.Constants.ACTION_QUEUE_REORDER
 import com.naman14.timberx.constants.Constants.ACTION_REPEAT_QUEUE
@@ -35,20 +35,62 @@ import com.naman14.timberx.constants.Constants.SONG
 import com.naman14.timberx.constants.Constants.SONGS_LIST
 import com.naman14.timberx.db.QueueDao
 import com.naman14.timberx.models.MediaID
+import com.naman14.timberx.playback.AudioFocusHelper
 import com.naman14.timberx.repository.SongsRepository
+import timber.log.Timber
 
 class MediaSessionCallback(
     private val mediaSession: MediaSessionCompat,
     private val songPlayer: SongPlayer,
+    private val audioFocusHelper: AudioFocusHelper,
     private val songsRepository: SongsRepository,
     private val queueDao: QueueDao
 ) : MediaSessionCompat.Callback() {
 
-    override fun onPause() = songPlayer.pause()
+    init {
+        audioFocusHelper.onAudioFocusGain {
+            Timber.d("GAIN")
+            val isPlaying = songPlayer.getSession().controller.playbackState.state == STATE_PLAYING
+            if (isAudioFocusGranted && !isPlaying) {
+                songPlayer.playSong()
+            } else audioFocusHelper.setVolume(AudioManager.ADJUST_RAISE)
+            isAudioFocusGranted = false
+        }
+        audioFocusHelper.onAudioFocusLoss {
+            Timber.d("LOSS")
+            abandonPlayback()
+            isAudioFocusGranted = false
+            songPlayer.pause()
+        }
 
-    override fun onPlay() = songPlayer.playSong()
+        audioFocusHelper.onAudioFocusLossTransient {
+            Timber.d("TRANSIENT")
+            val isPlaying = songPlayer.getSession().controller.playbackState.state == STATE_PLAYING
+            if (isPlaying) {
+                isAudioFocusGranted = true
+                songPlayer.pause()
+            }
+        }
+
+        audioFocusHelper.onAudioFocusLossTransientCanDuck {
+            Timber.d("TRANSIENT_CAN_DUCK")
+            audioFocusHelper.setVolume(AudioManager.ADJUST_LOWER)
+        }
+    }
+
+    override fun onPause() {
+        Timber.d("onPause()")
+        songPlayer.pause()
+    }
+
+    override fun onPlay() {
+        Timber.d("onPlay()")
+        if (audioFocusHelper.requestPlayback())
+            songPlayer.playSong()
+    }
 
     override fun onPlayFromSearch(query: String?, extras: Bundle?) {
+        Timber.d("onPlayFromSearch()")
         query?.let {
             val song = songsRepository.searchSongs(query, 1)
             if (song.isNotEmpty()) {
@@ -58,6 +100,7 @@ class MediaSessionCallback(
     }
 
     override fun onPlayFromMediaId(mediaId: String, extras: Bundle?) {
+        Timber.d("onPlayFromMediaId()")
         val songId = MediaID().fromString(mediaId).mediaId!!.toLong()
         songPlayer.playSong(songId)
 
@@ -74,23 +117,34 @@ class MediaSessionCallback(
         }
     }
 
-    override fun onSeekTo(pos: Long) = songPlayer.seekTo(pos.toInt())
+    override fun onSeekTo(pos: Long) {
+        Timber.d("onSeekTo()")
+        songPlayer.seekTo(pos.toInt())
+    }
 
-    override fun onSkipToNext() = songPlayer.nextSong()
+    override fun onSkipToNext() {
+        Timber.d("onSkipToNext()")
+        songPlayer.nextSong()
+    }
 
-    override fun onSkipToPrevious() = songPlayer.previousSong()
+    override fun onSkipToPrevious() {
+        Timber.d("onSkipToPrevious()")
+        songPlayer.previousSong()
+    }
 
-    override fun onStop() = songPlayer.stop()
+    override fun onStop() {
+        Timber.d("onStop()")
+        songPlayer.stop()
+    }
 
     override fun onSetRepeatMode(repeatMode: Int) {
         super.onSetRepeatMode(repeatMode)
         val bundle = mediaSession.controller.playbackState.extras ?: Bundle()
         songPlayer.setPlaybackState(
-                PlaybackStateCompat.Builder(mediaSession.controller.playbackState)
-                        .setExtras(bundle.apply {
-                            putInt(REPEAT_MODE, repeatMode)
-                        }
-                        ).build()
+            Builder(mediaSession.controller.playbackState)
+                    .setExtras(bundle.apply {
+                        putInt(REPEAT_MODE, repeatMode)
+                    }).build()
         )
     }
 
@@ -98,10 +152,10 @@ class MediaSessionCallback(
         super.onSetShuffleMode(shuffleMode)
         val bundle = mediaSession.controller.playbackState.extras ?: Bundle()
         songPlayer.setPlaybackState(
-                PlaybackStateCompat.Builder(mediaSession.controller.playbackState)
-                        .setExtras(bundle.apply {
-                            putInt(SHUFFLE_MODE, shuffleMode)
-                        }).build()
+            Builder(mediaSession.controller.playbackState)
+                    .setExtras(bundle.apply {
+                        putInt(SHUFFLE_MODE, shuffleMode)
+                    }).build()
         )
     }
 
